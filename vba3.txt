@@ -1,0 +1,94 @@
+Dim conn As Object
+Dim cmd As Object
+Dim rs As Object
+
+Sub OpenConnection()
+    On Error GoTo ErrHandler
+    Set conn = CreateObject("ADODB.Connection")
+    conn.Open "Provider=Microsoft.ACE.OLEDB.12.0;Data Source=C:\Path\To\Your\EmployeeDB.accdb;"
+    Exit Sub
+
+ErrHandler:
+    MsgBox "Erreur d'ouverture de la connexion : " & Err.Description, vbCritical
+End Sub
+
+Sub CloseConnection()
+    On Error Resume Next
+    If Not conn Is Nothing Then conn.Close
+    Set conn = Nothing
+    On Error GoTo 0
+End Sub
+_______________________________________________________________________________________________________________________________________________________________________
+' Ajouter un nouvel enregistrement
+Private Sub btnCreate_Click()
+    Call OpenConnection
+
+    Set cmd = CreateObject("ADODB.Command")
+    cmd.ActiveConnection = conn
+    cmd.CommandText = "INSERT INTO Employees (FirstName, LastName) VALUES (?, ?)"
+    cmd.Parameters.Append cmd.CreateParameter("FirstName", 200, 1, 255, txtFirstName.Value)
+    cmd.Parameters.Append cmd.CreateParameter("LastName", 200, 1, 255, txtLastName.Value)
+
+    cmd.Execute
+    MsgBox "Employé ajouté avec succès !", vbInformation
+
+    Call CloseConnection
+End Sub
+
+' Lire tous les enregistrements et afficher dans la feuille
+Private Sub btnRead_Click()
+    Call OpenConnection
+
+    Set cmd = CreateObject("ADODB.Command")
+    cmd.ActiveConnection = conn
+    cmd.CommandText = "SELECT * FROM Employees"
+
+    Set rs = cmd.Execute
+    Dim row As Integer
+    row = 2 ' Ligne de départ pour afficher les données
+
+    Do While Not rs.EOF
+        Sheets("Sheet1").Cells(row, 1).Value = rs("ID")
+        Sheets("Sheet1").Cells(row, 2).Value = rs("FirstName")
+        Sheets("Sheet1").Cells(row, 3).Value = rs("LastName")
+        row = row + 1
+        rs.MoveNext
+    Loop
+
+    Call CloseConnection
+End Sub
+
+' Mettre à jour un enregistrement existant
+Private Sub btnUpdate_Click()
+    Call OpenConnection
+
+    Set cmd = CreateObject("ADODB.Command")
+    cmd.ActiveConnection = conn
+    cmd.CommandText = "UPDATE Employees SET FirstName=?, LastName=? WHERE ID=?"
+    cmd.Parameters.Append cmd.CreateParameter("FirstName", 200, 1, 255, txtFirstName.Value)
+    cmd.Parameters.Append cmd.CreateParameter("LastName", 200, 1, 255, txtLastName.Value)
+    cmd.Parameters.Append cmd.CreateParameter("ID", 3, 1, , txtEmployeeID.Value)
+
+    cmd.Execute
+    MsgBox "Employé mis à jour avec succès !", vbInformation
+
+    Call CloseConnection
+End Sub
+
+' Supprimer un enregistrement
+Private Sub btnDelete_Click()
+    If MsgBox("Voulez-vous vraiment supprimer cet employé ?", vbYesNo + vbQuestion) = vbYes Then
+        Call OpenConnection
+
+        Set cmd = CreateObject("ADODB.Command")
+        cmd.ActiveConnection = conn
+        cmd.CommandText = "DELETE FROM Employees WHERE ID=?"
+        cmd.Parameters.Append cmd.CreateParameter("ID", 3, 1, , txtEmployeeID.Value)
+
+        cmd.Execute
+        MsgBox "Employé supprimé avec succès !", vbInformation
+
+        Call CloseConnection
+    End If
+End Sub
+
